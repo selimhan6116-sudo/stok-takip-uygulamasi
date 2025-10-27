@@ -10,7 +10,7 @@ from datetime import datetime
 USER_CREDENTIALS = {
     "aster1": "1212",
     "meg25": "2525",
-    "mtc61": "1661",
+    "mtc61": "6116",
     "shs61": "6161"
 }
 
@@ -289,4 +289,3 @@ else:
         alt_parca_stoklari_page()
     elif page == "Stok Gecmisi":
         stok_gecmisi_page()
-
