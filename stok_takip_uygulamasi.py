@@ -8,8 +8,10 @@ from datetime import datetime
 # Basit kullanıcı doğrulama (örnek)
 # --------------------------
 USER_CREDENTIALS = {
-    "admin": "1234",
-    "selim": "han123"
+    "aster1": "1212",
+    "meg25": "2525",
+    "mtc61": "1661",
+    "shs61": "6161"
 }
 
 # --------------------------
@@ -287,3 +289,4 @@ else:
         alt_parca_stoklari_page()
     elif page == "Stok Gecmisi":
         stok_gecmisi_page()
+
