@@ -201,7 +201,7 @@ def urun_girisi_page():
         st.success("Stoklar güncellendi")
 
 # --------------------------
-# 🔥 Fire Girişi (YENİ)
+# 🔥 Fire Girişi
 # --------------------------
 def fire_girisi_page():
     st.title("🔥 Fire Girişi")
@@ -290,3 +290,4 @@ else:
         alt_parca_stoklari_page()
     elif page == "Stok Gecmisi":
         stok_gecmisi_page()
+
