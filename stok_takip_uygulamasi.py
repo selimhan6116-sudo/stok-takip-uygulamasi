@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+from supabase import create_client
+
+supabase = create_client(
+    st.secrets["SUPABASE_URL"],
+    st.secrets["SUPABASE_KEY"]
+)
 import streamlit as st
 import pandas as pd
 import copy
@@ -291,5 +297,6 @@ else:
         alt_parca_stoklari_page()
     elif page == "Stok Gecmisi":
         stok_gecmisi_page()
+
 
 
