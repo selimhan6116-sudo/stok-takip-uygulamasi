@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
-from supabase import create_client
 from datetime import datetime
+from supabase import create_client
 
-# --------------------------
-# Supabase bağlantı
-# --------------------------
+# ==========================
+# SUPABASE BAĞLANTISI
+# ==========================
 supabase = create_client(
     st.secrets["SUPABASE_URL"],
     st.secrets["SUPABASE_SERVICE_KEY"]
 )
 
-# --------------------------
-# Kullanıcılar
-# --------------------------
+# ==========================
+# KULLANICI
+# ==========================
 USER_CREDENTIALS = {
     "aster1": "1212",
     "meg25": "2525",
@@ -23,133 +23,130 @@ USER_CREDENTIALS = {
     "ıstu59": "5959"
 }
 
-# --------------------------
-# Session init
-# --------------------------
+# ==========================
+# SESSION
+# ==========================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# --------------------------
-# DB yardımcıları
-# --------------------------
+# ==========================
+# DB FONKSİYONLARI
+# ==========================
 def load_stock():
     res = supabase.table("sub_parts_stock").select("*").execute()
-    return {r["part_code"]: r for r in res.data}
+    return {r["part"]: {"stok": r["stok"], "kritik": r["kritik"]} for r in res.data}
 
-def save_stock(stock_dict):
-    rows = []
-    for p, v in stock_dict.items():
-        rows.append({
-            "part_code": p,
-            "stok": v["stok"],
-            "kritik": v["kritik"]
-        })
-    supabase.table("sub_parts_stock").upsert(rows).execute()
+def update_stock(part, new_stock):
+    supabase.table("sub_parts_stock").update(
+        {"stok": new_stock}
+    ).eq("part", part).execute()
 
-def add_history(user, product, qty, details):
-    supabase.table("stock_history").insert({
+def log_history(user, product, qty, details):
+    supabase.table("stok_history").insert({
         "timestamp": datetime.now().isoformat(),
-        "user_name": user,
+        "user": user,
         "product": product,
         "qty": qty,
         "details": details
     }).execute()
 
-# --------------------------
-# Login
-# --------------------------
+# ==========================
+# LOGIN
+# ==========================
 def login_page():
-    st.title("🔐 Stok Takip Sistemi")
+    st.title("🔐 Giriş")
     u = st.text_input("Kullanıcı")
     p = st.text_input("Şifre", type="password")
     if st.button("Giriş"):
-        if USER_CREDENTIALS.get(u) == p:
+        if u in USER_CREDENTIALS and USER_CREDENTIALS[u] == p:
             st.session_state.logged_in = True
             st.session_state.username = u
             st.rerun()
         else:
             st.error("Hatalı giriş")
 
-# --------------------------
-# Fire Girişi
-# --------------------------
-def fire_girisi_page():
-    st.title("🔥 Fire Girişi")
-    stock = load_stock()
+# ==========================
+# LOGOUT
+# ==========================
+def logout():
+    st.sidebar.write(f"👤 {st.session_state.username}")
+    if st.sidebar.button("Çıkış"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.rerun()
 
-    part = st.selectbox("Alt Parça", stock.keys())
-    qty = st.number_input("Fire Adedi", min_value=0.0)
+# ==========================
+# FIRE GİRİŞİ
+# ==========================
+def fire_page(stock):
+    st.title("🔥 Fire Girişi")
+    part = st.selectbox("Alt Parça", sorted(stock.keys()))
+    qty = st.number_input("Fire Adedi", min_value=0.0, step=1.0)
 
     if st.button("Kaydet"):
         if qty <= 0:
-            st.warning("Miktar gir")
+            st.warning("Adet 0 olamaz")
             return
-        if stock[part]["stok"] < qty:
+
+        current = stock[part]["stok"]
+        if current < qty:
             st.error("Yetersiz stok")
             return
 
-        before = stock[part]["stok"]
-        stock[part]["stok"] -= qty
-        save_stock(stock)
+        new_stock = current - qty
+        update_stock(part, new_stock)
 
-        add_history(
+        log_history(
             st.session_state.username,
             "FIRE",
             qty,
-            [{"part": part, "before": before, "after": stock[part]["stok"]}]
+            [{"part": part, "before": current, "after": new_stock}]
         )
+
         st.success("Fire kaydedildi")
+        st.rerun()
 
-# --------------------------
-# Alt Parça Stokları
-# --------------------------
-def alt_parca_stoklari_page():
+# ==========================
+# STOK TABLOSU
+# ==========================
+def stock_page(stock):
     st.title("⚙️ Alt Parça Stokları")
-    stock = load_stock()
-
     df = pd.DataFrame([
         {"Parça": p, "Stok": v["stok"], "Kritik": v["kritik"]}
         for p, v in stock.items()
     ])
+    st.dataframe(df, use_container_width=True)
 
-    edited = st.data_editor(df, use_container_width=True)
-
-    if st.button("Kaydet"):
-        for _, r in edited.iterrows():
-            stock[r["Parça"]]["stok"] = float(r["Stok"])
-            stock[r["Parça"]]["kritik"] = float(r["Kritik"])
-        save_stock(stock)
-        st.success("Kaydedildi")
-
-    kritik = [p for p,v in stock.items() if v["stok"] < v["kritik"]]
+    kritik = [p for p, v in stock.items() if v["stok"] < v["kritik"]]
     if kritik:
-        st.warning("⚠️ Kritik: " + ", ".join(kritik))
+        st.warning("⚠️ Kritik stokta: " + ", ".join(kritik))
 
-# --------------------------
-# Geçmiş
-# --------------------------
-def stok_gecmisi_page():
+# ==========================
+# GEÇMİŞ
+# ==========================
+def history_page():
     st.title("📜 Stok Geçmişi")
-    res = supabase.table("stock_history").select("*").order("timestamp", desc=True).execute()
+    res = supabase.table("stok_history").select("*").order("timestamp", desc=True).execute()
+    if not res.data:
+        st.info("Kayıt yok")
+        return
     st.dataframe(pd.DataFrame(res.data), use_container_width=True)
 
-# --------------------------
+# ==========================
 # MAIN
-# --------------------------
+# ==========================
 if not st.session_state.logged_in:
     login_page()
 else:
-    st.sidebar.write(f"👤 {st.session_state.username}")
-    page = st.sidebar.radio(
-        "Menü",
-        ["Fire Girisi", "Alt Parca Stoklari", "Stok Gecmisi"]
-    )
+    logout()
+    stock = load_stock()
+    page = st.sidebar.radio("Sayfa", ["Fire Girisi", "Alt Parca Stoklari", "Stok Gecmisi"])
 
     if page == "Fire Girisi":
-        fire_girisi_page()
+        fire_page(stock)
     elif page == "Alt Parca Stoklari":
-        alt_parca_stoklari_page()
-    else:
-        stok_gecmisi_page()
+        stock_page(stock)
+    elif page == "Stok Gecmisi":
+        history_page()
