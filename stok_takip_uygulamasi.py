@@ -2,8 +2,8 @@
 from supabase import create_client
 
 supabase = create_client(
-    st.secrets["SUPABASE_URL"],
-    st.secrets["SUPABASE_KEY"]
+    st.secrets["https://gnoeqhmvwffggztgnahh.supabase.co"],
+    st.secrets["sb_secret_GOP6B8FV7N5Ago0di-ZZGA_X913ryqq"]
 )
 import streamlit as st
 import pandas as pd
@@ -297,6 +297,7 @@ else:
         alt_parca_stoklari_page()
     elif page == "Stok Gecmisi":
         stok_gecmisi_page()
+
 
 
 
